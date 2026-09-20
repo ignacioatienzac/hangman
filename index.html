@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#24314d">
+  <title>Hangman</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #24314d;
+      --muted: #667085;
+      --paper: #fffdf8;
+      --card: #ffffff;
+      --line: #d9deea;
+      --accent: #e7513b;
+      --accent-dark: #b82e24;
+      --gold: #f4c654;
+      --correct: #267a53;
+      --correct-bg: #def3e7;
+      --wrong: #b42318;
+      --wrong-bg: #fee4e2;
+      --shadow: 0 18px 50px rgba(36, 49, 77, 0.13);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { min-height: 100%; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 6%, rgba(244, 198, 84, .30), transparent 27rem),
+        radial-gradient(circle at 92% 94%, rgba(231, 81, 59, .13), transparent 30rem),
+        #f5f7fb;
+      font-family: Inter, ui-rounded, "SF Pro Rounded", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input { font: inherit; }
+
+    button { -webkit-tap-highlight-color: transparent; }
+
+    .app {
+      width: min(1180px, calc(100% - 32px));
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: clamp(20px, 4vw, 42px) 0;
+      display: grid;
+      align-content: center;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+    }
+
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 8px 18px rgba(231, 81, 59, .24);
+      font-size: 1.55rem;
+      font-weight: 900;
+      transform: rotate(-3deg);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.65rem, 3vw, 2.35rem);
+      letter-spacing: -.04em;
+      line-height: 1;
+    }
+
+    .eyebrow {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: .88rem;
+      font-weight: 650;
+    }
+
+    .screen {
+      display: none;
+      background: rgba(255,255,255,.86);
+      border: 1px solid rgba(217, 222, 234, .9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .screen.active { display: grid; }
+
+    .setup-screen,
+    .handoff-screen {
+      min-height: min(580px, calc(100vh - 150px));
+      place-items: center;
+      padding: clamp(28px, 7vw, 70px);
+      text-align: center;
+    }
+
+    .setup-card,
+    .handoff-card {
+      width: min(100%, 600px);
+    }
+
+    .setup-illustration,
+    .handoff-icon {
+      width: 86px;
+      height: 86px;
+      margin: 0 auto 22px;
+      display: grid;
+      place-items: center;
+      border-radius: 28px;
+      background: #fff4d6;
+      color: var(--ink);
+      font-size: 2.7rem;
+      box-shadow: inset 0 0 0 1px rgba(244, 198, 84, .55);
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: clamp(1.7rem, 4vw, 2.55rem);
+      letter-spacing: -.04em;
+      line-height: 1.1;
+    }
+
+    .lead {
+      margin: 0 auto 28px;
+      max-width: 48ch;
+      color: var(--muted);
+      font-size: clamp(1rem, 2vw, 1.12rem);
+      line-height: 1.55;
+    }
+
+    .input-wrap { text-align: left; }
+
+    label {
+      display: block;
+      margin: 0 0 8px;
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .word-input {
+      width: 100%;
+      min-height: 58px;
+      padding: 13px 17px;
+      border: 2px solid var(--line);
+      border-radius: 15px;
+      outline: none;
+      color: var(--ink);
+      background: white;
+      font-size: 1.08rem;
+      letter-spacing: .02em;
+      transition: border-color .2s, box-shadow .2s;
+    }
+
+    .word-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(231, 81, 59, .12);
+    }
+
+    .input-help {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: .86rem;
+      line-height: 1.4;
+    }
+
+    .error-message {
+      min-height: 22px;
+      margin: 8px 0 0;
+      color: var(--wrong);
+      font-size: .9rem;
+      font-weight: 700;
+    }
+
+    .primary-button {
+      width: 100%;
+      min-height: 56px;
+      margin-top: 14px;
+      border: 0;
+      border-radius: 15px;
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 9px 18px rgba(231, 81, 59, .22);
+      cursor: pointer;
+      font-weight: 850;
+      transition: transform .15s, background .15s, box-shadow .15s;
+    }
+
+    .primary-button:hover { background: var(--accent-dark); }
+    .primary-button:active { transform: translateY(1px); box-shadow: none; }
+    .primary-button:focus-visible,
+    .key:focus-visible { outline: 4px solid rgba(244, 198, 84, .85); outline-offset: 2px; }
+
+    .handoff-card .lead { margin-bottom: 12px; }
+
+    .secret-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0 18px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #eef1f7;
+      color: var(--muted);
+      font-size: .9rem;
+      font-weight: 750;
+    }
+
+    .game-screen {
+      min-height: min(690px, calc(100vh - 150px));
+      grid-template-columns: minmax(300px, .82fr) minmax(420px, 1.25fr);
+      overflow: hidden;
+    }
+
+    .drawing-panel {
+      min-width: 0;
+      padding: clamp(24px, 4vw, 42px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      background:
+        linear-gradient(150deg, rgba(255,255,255,.75), rgba(255,247,226,.86)),
+        repeating-linear-gradient(0deg, transparent 0 31px, rgba(36,49,77,.035) 31px 32px);
+      border-right: 1px solid var(--line);
+    }
+
+    .mistakes-pill {
+      align-self: center;
+      padding: 8px 13px;
+      border-radius: 999px;
+      background: white;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      box-shadow: 0 5px 16px rgba(36,49,77,.07);
+      font-size: .92rem;
+      font-weight: 750;
+    }
+
+    .mistakes-pill strong { color: var(--ink); }
+
+    .hangman-wrap {
+      width: min(100%, 410px);
+      margin: 18px auto 0;
+      aspect-ratio: 1 / .92;
+    }
+
+    .hangman-svg { width: 100%; height: 100%; overflow: visible; }
+    .gallows { fill: none; stroke: var(--ink); stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; }
+    .body-part { fill: none; stroke: var(--accent); stroke-width: 11; stroke-linecap: round; opacity: 0; transform-origin: center; transform: scale(.65); transition: opacity .3s, transform .3s; }
+    .body-part.visible { opacity: 1; transform: scale(1); }
+
+    .game-panel {
+      min-width: 0;
+      padding: clamp(26px, 5vw, 52px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .word-display {
+      min-height: 92px;
+      display: flex;
+      flex-wrap: wrap;
+      align-content: center;
+      justify-content: center;
+      gap: 11px 9px;
+      margin: 0 0 28px;
+      padding: 12px 4px;
+    }
+
+    .word-char {
+      min-width: clamp(25px, 4vw, 39px);
+      height: clamp(47px, 6vw, 59px);
+      display: grid;
+      place-items: center;
+      border-bottom: 4px solid var(--ink);
+      font-size: clamp(1.55rem, 4vw, 2.35rem);
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .word-char.revealed { color: var(--accent-dark); }
+    .word-char.space { min-width: 20px; border-bottom: 0; }
+    .word-char.punctuation { min-width: 15px; border-bottom: 0; color: var(--ink); }
+
+    .wrong-box {
+      min-height: 70px;
+      margin-bottom: 26px;
+      padding: 13px 16px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: #f8f9fc;
+    }
+
+    .wrong-label {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--muted);
+      font-size: .86rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .wrong-letters {
+      min-height: 24px;
+      color: var(--wrong);
+      font-size: 1.08rem;
+      font-weight: 900;
+      letter-spacing: .14em;
+    }
+
+    .wrong-letters.empty { color: #98a2b3; font-weight: 650; letter-spacing: 0; }
+
+    .keyboard {
+      display: grid;
+      grid-template-columns: repeat(9, minmax(38px, 1fr));
+      gap: 9px;
+    }
+
+    .key {
+      min-width: 0;
+      min-height: 49px;
+      padding: 0;
+      border: 1px solid #cfd5e2;
+      border-bottom-width: 3px;
+      border-radius: 11px;
+      background: white;
+      color: var(--ink);
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 850;
+      transition: transform .12s, background .18s, color .18s, border-color .18s;
+    }
+
+    .key:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--ink); }
+    .key:active:not(:disabled) { transform: translateY(1px); border-bottom-width: 1px; }
+    .key:disabled { cursor: default; }
+    .key.correct { background: var(--correct-bg); color: var(--correct); border-color: #8bc8a7; }
+    .key.wrong { background: var(--wrong-bg); color: var(--wrong); border-color: #f5aaa5; }
+
+    .result {
+      display: none;
+      margin-top: 24px;
+      padding: 20px;
+      border: 2px solid var(--line);
+      border-radius: 18px;
+      background: white;
+      text-align: center;
+      box-shadow: 0 10px 28px rgba(36,49,77,.09);
+    }
+
+    .result.show { display: block; animation: appear .28s ease-out; }
+    .result.win { border-color: #87caa4; background: #f2fbf6; }
+    .result.lose { border-color: #f0aaa4; background: #fff8f7; }
+    .result-title { margin: 0 0 5px; font-size: 1.5rem; font-weight: 900; letter-spacing: -.02em; }
+    .result-text { margin: 0; color: var(--muted); line-height: 1.5; }
+    .result-word { color: var(--ink); font-weight: 900; }
+    .result .primary-button { width: min(100%, 320px); }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @keyframes appear {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 780px) {
+      .app {
+        width: min(100% - 20px, 620px);
+        padding: 14px 0 22px;
+        align-content: start;
+      }
+
+      .topbar { margin: 2px 4px 13px; }
+      .brand-mark { width: 42px; height: 42px; border-radius: 13px; font-size: 1.3rem; }
+      .eyebrow { display: none; }
+      .screen { border-radius: 20px; }
+      .setup-screen, .handoff-screen { min-height: calc(100vh - 90px); padding: 28px 20px; }
+      .game-screen { grid-template-columns: 1fr; min-height: auto; }
+
+      .drawing-panel {
+        padding: 18px 18px 10px;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .hangman-wrap {
+        width: min(100%, 285px);
+        margin-top: 8px;
+        aspect-ratio: 1 / .76;
+      }
+
+      .game-panel { padding: 20px 15px 24px; }
+      .word-display { min-height: 72px; margin-bottom: 13px; gap: 8px 7px; }
+      .word-char { min-width: clamp(23px, 7vw, 34px); height: 44px; border-bottom-width: 3px; font-size: clamp(1.4rem, 8vw, 1.85rem); }
+      .word-char.space { min-width: 12px; }
+      .wrong-box { min-height: 62px; margin-bottom: 17px; padding: 10px 13px; }
+      .keyboard { grid-template-columns: repeat(7, 1fr); gap: 7px; }
+      .key { min-height: 46px; border-radius: 10px; }
+      .result { margin-top: 18px; padding: 17px 13px; }
+    }
+
+    @media (max-width: 380px) {
+      .keyboard { gap: 5px; }
+      .key { min-height: 43px; font-size: .92rem; }
+      .hangman-wrap { width: min(100%, 245px); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">Ñ</div>
+        <div>
+          <h1>Hangman</h1>
+          <p class="eyebrow">Spanish vocabulary game</p>
+        </div>
+      </div>
+    </header>
+
+    <section id="setupScreen" class="screen setup-screen active" aria-labelledby="setupTitle">
+      <div class="setup-card">
+        <div class="setup-illustration" aria-hidden="true">✏️</div>
+        <h2 id="setupTitle">Enter the secret word</h2>
+        <form id="setupForm" novalidate>
+          <div class="input-wrap">
+            <label for="secretInput">Word or phrase</label>
+            <input id="secretInput" class="word-input" type="text" maxlength="40" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Example: Buenos días" aria-describedby="inputHelp inputError">
+            <div id="inputHelp" class="input-help">
+              <span>Maximum 40 characters</span>
+            </div>
+            <p id="inputError" class="error-message" role="alert"></p>
+          </div>
+          <button class="primary-button" type="submit">Set up the game</button>
+        </form>
+      </div>
+    </section>
+
+    <section id="handoffScreen" class="screen handoff-screen" aria-labelledby="handoffTitle">
+      <div class="handoff-card">
+        <div class="handoff-icon" aria-hidden="true">🙈</div>
+        <h2 id="handoffTitle">All set!</h2>
+        <p class="lead">Pass the device to the person who will guess the word.</p>
+        <div class="secret-chip" aria-hidden="true">🔒 Secret word hidden</div>
+        <button id="readyButton" class="primary-button" type="button">I’m ready to play</button>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="screen game-screen" aria-label="Hangman game">
+      <div class="drawing-panel">
+        <div class="mistakes-pill">Mistakes: <strong><span id="mistakeCount">0</span> / 6</strong></div>
+        <div class="hangman-wrap">
+          <svg class="hangman-svg" viewBox="0 0 400 360" role="img" aria-labelledby="drawingTitle drawingDesc">
+            <title id="drawingTitle">Hangman drawing</title>
+            <desc id="drawingDesc">A new part of the character appears after each mistake.</desc>
+            <path class="gallows" d="M45 330 H335 M95 330 V40 H278 V78 M95 88 L145 40" />
+            <line class="gallows" x1="278" y1="78" x2="278" y2="104" />
+            <circle class="body-part" data-part="0" cx="278" cy="137" r="32" />
+            <line class="body-part" data-part="1" x1="278" y1="169" x2="278" y2="252" />
+            <line class="body-part" data-part="2" x1="278" y1="188" x2="234" y2="224" />
+            <line class="body-part" data-part="3" x1="278" y1="188" x2="322" y2="224" />
+            <line class="body-part" data-part="4" x1="278" y1="252" x2="238" y2="304" />
+            <line class="body-part" data-part="5" x1="278" y1="252" x2="318" y2="304" />
+          </svg>
+        </div>
+      </div>
+
+      <div class="game-panel">
+        <p class="sr-only" id="gameInstructions">Select a letter on the screen. You can also use a physical keyboard.</p>
+        <div id="wordDisplay" class="word-display" aria-label="Word to guess" aria-describedby="gameInstructions"></div>
+
+        <div class="wrong-box">
+          <span class="wrong-label">Incorrect letters</span>
+          <div id="wrongLetters" class="wrong-letters empty" aria-live="polite">None yet</div>
+        </div>
+
+        <div id="keyboard" class="keyboard" aria-label="Letter keyboard"></div>
+        <p id="liveStatus" class="sr-only" aria-live="polite"></p>
+
+        <div id="result" class="result" role="status">
+          <p id="resultTitle" class="result-title"></p>
+          <p id="resultText" class="result-text"></p>
+          <button id="againButton" class="primary-button" type="button">Play again</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const ALPHABET = [..."ABCDEFGHIJKLMNÑOPQRSTUVWXYZ"];
+      const MAX_MISTAKES = 6;
+      const letterPattern = /[A-ZÁÉÍÓÚÜÑ]/i;
+
+      const elements = {
+        setupScreen: document.querySelector("#setupScreen"),
+        handoffScreen: document.querySelector("#handoffScreen"),
+        gameScreen: document.querySelector("#gameScreen"),
+        setupForm: document.querySelector("#setupForm"),
+        secretInput: document.querySelector("#secretInput"),
+        inputError: document.querySelector("#inputError"),
+        readyButton: document.querySelector("#readyButton"),
+        mistakeCount: document.querySelector("#mistakeCount"),
+        wordDisplay: document.querySelector("#wordDisplay"),
+        wrongLetters: document.querySelector("#wrongLetters"),
+        keyboard: document.querySelector("#keyboard"),
+        liveStatus: document.querySelector("#liveStatus"),
+        result: document.querySelector("#result"),
+        resultTitle: document.querySelector("#resultTitle"),
+        resultText: document.querySelector("#resultText"),
+        againButton: document.querySelector("#againButton"),
+        bodyParts: [...document.querySelectorAll(".body-part")]
+      };
+
+      let secret = "";
+      let guessed = new Set();
+      let wrongGuesses = [];
+      let gameActive = false;
+
+      function showScreen(name) {
+        ["setupScreen", "handoffScreen", "gameScreen"].forEach(key => {
+          const active = key === name;
+          elements[key].classList.toggle("active", active);
+          elements[key].setAttribute("aria-hidden", String(!active));
+        });
+      }
+
+      function getLetterKey(character) {
+        const upper = character.toLocaleUpperCase("es-ES").normalize("NFC");
+        if (upper === "Ñ") return "Ñ";
+        return upper.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      }
+
+      function isLetter(character) {
+        return letterPattern.test(character);
+      }
+
+      function prepareSecret(rawValue) {
+        return rawValue.normalize("NFC").trim().replace(/\s+/g, " ").toLocaleUpperCase("es-ES");
+      }
+
+      function buildKeyboard() {
+        elements.keyboard.replaceChildren();
+        ALPHABET.forEach(letter => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "key";
+          button.textContent = letter;
+          button.dataset.letter = letter;
+          button.setAttribute("aria-label", `Letter ${letter}`);
+          button.addEventListener("click", () => chooseLetter(letter));
+          elements.keyboard.append(button);
+        });
+      }
+
+      function renderWord(revealAll = false) {
+        elements.wordDisplay.replaceChildren();
+
+        [...secret].forEach(character => {
+          const span = document.createElement("span");
+          const letter = isLetter(character);
+
+          if (character === " ") {
+            span.className = "word-char space";
+            span.setAttribute("aria-hidden", "true");
+          } else if (!letter) {
+            span.className = "word-char punctuation";
+            span.textContent = character;
+          } else {
+            const visible = revealAll || guessed.has(getLetterKey(character));
+            span.className = `word-char${visible ? " revealed" : ""}`;
+            span.textContent = visible ? character : "";
+            span.setAttribute("aria-label", visible ? character : "hidden letter");
+          }
+
+          elements.wordDisplay.append(span);
+        });
+      }
+
+      function updateDrawing() {
+        elements.mistakeCount.textContent = String(wrongGuesses.length);
+        elements.bodyParts.forEach((part, index) => {
+          part.classList.toggle("visible", index < wrongGuesses.length);
+        });
+      }
+
+      function updateWrongLetters() {
+        if (wrongGuesses.length === 0) {
+          elements.wrongLetters.textContent = "None yet";
+          elements.wrongLetters.classList.add("empty");
+          return;
+        }
+        elements.wrongLetters.textContent = wrongGuesses.join(" · ");
+        elements.wrongLetters.classList.remove("empty");
+      }
+
+      function hasLetter(letter) {
+        return [...secret].some(character => isLetter(character) && getLetterKey(character) === letter);
+      }
+
+      function hasWon() {
+        return [...secret].every(character => !isLetter(character) || guessed.has(getLetterKey(character)));
+      }
+
+      function chooseLetter(rawLetter) {
+        if (!gameActive) return;
+        const letter = getLetterKey(rawLetter);
+        if (!ALPHABET.includes(letter) || guessed.has(letter) || wrongGuesses.includes(letter)) return;
+
+        const keyButton = elements.keyboard.querySelector(`[data-letter="${letter}"]`);
+        const correct = hasLetter(letter);
+
+        if (correct) {
+          guessed.add(letter);
+          keyButton?.classList.add("correct");
+          elements.liveStatus.textContent = `${letter} is correct.`;
+        } else {
+          wrongGuesses.push(letter);
+          keyButton?.classList.add("wrong");
+          elements.liveStatus.textContent = `${letter} is not in the word.`;
+        }
+
+        if (keyButton) keyButton.disabled = true;
+        renderWord();
+        updateDrawing();
+        updateWrongLetters();
+
+        if (hasWon()) finishGame(true);
+        else if (wrongGuesses.length >= MAX_MISTAKES) finishGame(false);
+      }
+
+      function finishGame(won) {
+        gameActive = false;
+        elements.keyboard.querySelectorAll("button").forEach(button => { button.disabled = true; });
+        elements.result.className = `result show ${won ? "win" : "lose"}`;
+
+        if (won) {
+          elements.resultTitle.textContent = "🎉 You win!";
+          elements.resultText.textContent = "Well done! You guessed the word.";
+          elements.liveStatus.textContent = "You have won the game.";
+        } else {
+          renderWord(true);
+          elements.resultTitle.textContent = "Game over!";
+          elements.resultText.replaceChildren("The word was: ");
+          const strong = document.createElement("strong");
+          strong.className = "result-word";
+          strong.textContent = secret;
+          elements.resultText.append(strong);
+          elements.liveStatus.textContent = `Game over. The word was ${secret}.`;
+        }
+
+        window.setTimeout(() => elements.againButton.focus(), 50);
+      }
+
+      function resetGame() {
+        secret = "";
+        guessed = new Set();
+        wrongGuesses = [];
+        gameActive = false;
+        elements.secretInput.value = "";
+        elements.inputError.textContent = "";
+        elements.result.className = "result";
+        elements.resultTitle.textContent = "";
+        elements.resultText.textContent = "";
+        updateDrawing();
+        updateWrongLetters();
+        buildKeyboard();
+        showScreen("setupScreen");
+        window.setTimeout(() => elements.secretInput.focus(), 50);
+      }
+
+      elements.setupForm.addEventListener("submit", event => {
+        event.preventDefault();
+        const value = prepareSecret(elements.secretInput.value);
+
+        if (!value) {
+          elements.inputError.textContent = "Enter a word or phrase to start.";
+          elements.secretInput.focus();
+          return;
+        }
+
+        if (![...value].some(isLetter)) {
+          elements.inputError.textContent = "The word must contain at least one letter.";
+          elements.secretInput.focus();
+          return;
+        }
+
+        secret = value;
+        elements.secretInput.value = "";
+        elements.inputError.textContent = "";
+        showScreen("handoffScreen");
+        window.setTimeout(() => elements.readyButton.focus(), 50);
+      });
+
+      elements.secretInput.addEventListener("input", () => {
+        if (elements.inputError.textContent) elements.inputError.textContent = "";
+      });
+
+      elements.readyButton.addEventListener("click", () => {
+        guessed = new Set();
+        wrongGuesses = [];
+        gameActive = true;
+        buildKeyboard();
+        updateDrawing();
+        updateWrongLetters();
+        renderWord();
+        showScreen("gameScreen");
+        elements.keyboard.querySelector("button")?.focus();
+      });
+
+      elements.againButton.addEventListener("click", resetGame);
+
+      document.addEventListener("keydown", event => {
+        if (!gameActive || event.ctrlKey || event.metaKey || event.altKey) return;
+        if (event.key.length !== 1) return;
+        const letter = getLetterKey(event.key);
+        if (ALPHABET.includes(letter)) {
+          event.preventDefault();
+          chooseLetter(letter);
+        }
+      });
+
+      buildKeyboard();
+      showScreen("setupScreen");
+    })();
+  </script>
+</body>
+</html>
